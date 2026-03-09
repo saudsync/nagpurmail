@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#ff4500"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>NagpurMail Auto-Poster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Noto+Sans:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --orange: #ff4500;
+    --orange2: #ff6b1a;
+    --gold: #f5a623;
+    --dark: #0c0a08;
+    --dark2: #161210;
+    --card: #1e1a16;
+    --border: #2e2520;
+    --text: #f0e8dc;
+    --muted: #8a7a6a;
+    --green: #4caf50;
+    --red: #e63946;
+    --blue: #4a90d9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Noto Sans', sans-serif; background: var(--dark); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse at 20% 10%, #ff450015 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, #f5a62308 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a0800, #0c0a08);
+    border-bottom: 2px solid var(--orange);
+    padding: 14px 18px 12px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 20px #ff450033;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: var(--orange); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 12px #ff450066; }
+  .logo-text h1 { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--orange); line-height: 1; }
+  .logo-text span { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .status-badge { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 10px; font-size: 11px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .status-dot.idle { background: var(--muted); }
+  .status-dot.running { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Tabs */
+  .tabs { display: flex; background: var(--dark2); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 1; padding: 11px 8px; text-align: center; font-size: 11px; color: var(--muted); border: none; background: none; cursor: pointer; transition: all 0.2s; white-space: nowrap; border-bottom: 2px solid transparent; }
+  .tab.active { color: var(--orange); border-bottom-color: var(--orange); background: #ff450008; }
+  .tab-icon { display: block; font-size: 16px; margin-bottom: 2px; }
+
+  /* Sections */
+  .section { display: none; flex-direction: column; gap: 14px; padding: 16px; flex: 1; }
+  .section.active { display: flex; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+  /* Scheduler card */
+  .time-display { text-align: center; padding: 16px 0 8px; }
+  .time-big { font-family: 'Playfair Display', serif; font-size: 48px; color: var(--orange); line-height: 1; letter-spacing: -1px; }
+  .time-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .time-input-row { display: flex; gap: 10px; align-items: center; justify-content: center; margin: 12px 0; }
+  .time-input { background: var(--dark); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 10px 14px; font-size: 22px; text-align: center; width: 90px; font-family: 'Playfair Display', serif; }
+  .time-sep { font-size: 24px; color: var(--orange); font-family: 'Playfair Display', serif; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+  .toggle-label { font-size: 13px; color: var(--text); }
+  .toggle-sub { font-size: 11px; color: var(--muted); }
+  .toggle { position: relative; width: 48px; height: 26px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: #333; border-radius: 26px; transition: 0.3s; cursor: pointer; }
+  .toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  input:checked + .toggle-slider { background: var(--orange); }
+  input:checked + .toggle-slider:before { transform: translateX(22px); }
+
+  /* Config inputs */
+  .input-group { margin-bottom: 12px; }
+  .input-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; display: block; letter-spacing: 0.5px; }
+  .input-field { width: 100%; background: var(--dark); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 11px 14px; font-size: 13px; transition: border-color 0.2s; }
+  .input-field:focus { outline: none; border-color: var(--orange); }
+  .input-field::placeholder { color: var(--muted); }
+  select.input-field option { background: var(--dark2); }
+
+  /* Categories */
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cat-btn { background: var(--dark); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .cat-btn.selected { border-color: var(--orange); background: #ff450015; }
+  .cat-btn-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .cat-btn-label { font-size: 11px; color: var(--muted); }
+  .cat-btn.selected .cat-btn-label { color: var(--orange); }
+
+  /* Post count selector */
+  .count-row { display: flex; align-items: center; justify-content: space-between; }
+  .count-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--dark); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .count-btn:active { background: var(--orange); border-color: var(--orange); }
+  .count-num { font-family: 'Playfair Display', serif; font-size: 36px; color: var(--orange); }
+
+  /* Language selector */
+  .lang-row { display: flex; gap: 8px; }
+  .lang-btn { flex: 1; padding: 9px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--dark); color: var(--muted); font-size: 12px; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .lang-btn.selected { border-color: var(--gold); background: #f5a62315; color: var(--gold); }
+
+  /* Big action button */
+  .btn-primary { width: 100%; padding: 16px; border-radius: 14px; border: none; background: linear-gradient(135deg, var(--orange), var(--orange2)); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px #ff450055; transition: all 0.2s; active-transform: scale(0.98); letter-spacing: 0.3px; }
+  .btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 10px #ff450033; }
+  .btn-primary:disabled { background: #333; box-shadow: none; color: #666; cursor: not-allowed; }
+  .btn-secondary { width: 100%; padding: 13px; border-radius: 12px; border: 1px solid var(--border); background: var(--dark); color: var(--text); font-size: 14px; cursor: pointer; transition: all 0.2s; }
+  .btn-secondary:active { background: var(--card); }
+
+  /* Progress */
+  .progress-wrap { background: var(--dark); border-radius: 10px; overflow: hidden; height: 8px; margin: 8px 0; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--orange), var(--gold)); border-radius: 10px; transition: width 0.5s ease; }
+
+  /* Log */
+  .log-wrap { background: var(--dark); border-radius: 10px; padding: 10px; max-height: 180px; overflow-y: auto; }
+  .log-entry { font-size: 11px; padding: 3px 0; border-bottom: 1px solid #1a1a1a; display: flex; gap: 6px; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { color: var(--muted); min-width: 45px; }
+  .log-msg { color: var(--text); }
+  .log-entry.success .log-msg { color: var(--green); }
+  .log-entry.error .log-msg { color: var(--red); }
+  .log-entry.info .log-msg { color: var(--blue); }
+
+  /* Post cards */
+  .post-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; transition: border-color 0.2s; }
+  .post-card.published { border-color: #4caf5044; }
+  .post-card.failed { border-color: #e6394644; }
+  .post-card.pending { border-color: #f5a62344; }
+  .post-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; line-height: 1.4; }
+  .post-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .post-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+  .post-tag.cat { background: #ff450015; color: var(--orange); border: 1px solid #ff450033; }
+  .post-tag.status-pub { background: #4caf5015; color: var(--green); border: 1px solid #4caf5033; }
+  .post-tag.status-pend { background: #f5a62315; color: var(--gold); border: 1px solid #f5a62333; }
+  .post-tag.status-fail { background: #e6394615; color: var(--red); border: 1px solid #e6394633; }
+  .post-hashtags { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 30px; color: var(--orange); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+  /* Next run countdown */
+  .countdown-box { background: linear-gradient(135deg, #1a0800, #1e1a16); border: 1px solid var(--orange); border-radius: 14px; padding: 16px; text-align: center; }
+  .countdown-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+  .countdown-time { font-family: 'Playfair Display', serif; font-size: 38px; color: var(--orange); letter-spacing: 2px; margin: 4px 0; }
+  .countdown-sub { font-size: 12px; color: var(--muted); }
+
+  /* Floating run button */
+  .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--orange), var(--orange2)); border: none; color: #fff; font-size: 26px; cursor: pointer; box-shadow: 0 4px 20px #ff450088; z-index: 200; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+  .fab:active { transform: scale(0.92); }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* Notification banner */
+  .notif { position: fixed; top: 0; left: 0; right: 0; z-index: 999; padding: 14px 18px; font-size: 13px; font-weight: 600; transform: translateY(-100%); transition: transform 0.3s; text-align: center; max-width: 480px; margin: 0 auto; }
+  .notif.show { transform: translateY(0); }
+  .notif.success { background: var(--green); color: #fff; }
+  .notif.error { background: var(--red); color: #fff; }
+  .notif.info { background: var(--blue); color: #fff; }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #ffffff44; border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--dark); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="notif" class="notif"></div>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">🟠</div>
+        <div class="logo-text">
+          <h1>NagpurMail</h1>
+          <span>Auto-Poster</span>
+        </div>
+      </div>
+      <div class="status-badge">
+        <div id="statusDot" class="status-dot idle"></div>
+        <span id="statusText">Idle</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('home')">
+      <span class="tab-icon">🏠</span>Home
+    </button>
+    <button class="tab" onclick="switchTab('schedule')">
+      <span class="tab-icon">⏰</span>Schedule
+    </button>
+    <button class="tab" onclick="switchTab('settings')">
+      <span class="tab-icon">⚙️</span>Settings
+    </button>
+    <button class="tab" onclick="switchTab('posts')">
+      <span class="tab-icon">📋</span>Posts
+    </button>
+  </div>
+
+  <!-- HOME TAB -->
+  <div id="tab-home" class="section active">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num" id="totalPub">0</div>
+        <div class="stat-label">Published</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="todayPub">0</div>
+        <div class="stat-label">Today</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="totalFail">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+    </div>
+
+    <!-- Next run countdown -->
+    <div class="countdown-box" id="countdownBox">
+      <div class="countdown-label">Next Auto-Publish In</div>
+      <div class="countdown-time" id="countdown">--:--:--</div>
+      <div class="countdown-sub" id="countdownSub">Enable scheduler in Schedule tab</div>
+    </div>
+
+    <!-- Progress (shown during generation) -->
+    <div id="progressCard" class="card" style="display:none">
+      <div class="card-title">📡 Generating & Publishing</div>
+      <div style="font-size:13px; color:var(--text); margin-bottom:8px;" id="progressLabel">Starting...</div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <div style="font-size:11px; color:var(--muted); text-align:right;" id="progressCount">0 / 5</div>
+    </div>
+
+    <!-- Manual run -->
+    <button class="btn-primary" id="runNowBtn" onclick="runNow()">
+      ✨ Generate & Publish Now
+    </button>
+
+    <!-- Activity Log -->
+    <div class="card">
+      <div class="card-title">📡 Activity Log</div>
+      <div class="log-wrap" id="logWrap">
+        <div class="empty" style="padding:16px 0"><div class="empty-icon" style="font-size:24px">📭</div><div class="empty-text" style="font-size:12px">No activity yet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHEDULE TAB -->
+  <div id="tab-schedule" class="section">
+    <div class="card">
+      <div class="card-title">⏰ Daily Publish Time</div>
+      <div class="time-display">
+        <div class="time-big" id="schedTimeDisplay">08:00</div>
+        <div class="time-label">Every day at this time</div>
+      </div>
+      <div class="time-input-row">
+        <input type="number" id="schedHour" class="time-input" min="0" max="23" value="8" placeholder="HH" oninput="updateTimeDisplay()"/>
+        <span class="time-sep">:</span>
+        <input type="number" id="schedMin" class="time-input" min="0" max="59" value="0" placeholder="MM" oninput="updateTimeDisplay()"/>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Auto-Publish Daily</div>
+          <div class="toggle-sub" id="schedToggleLabel">Off — tap to enable</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="schedToggle" onchange="toggleScheduler()"/>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Posts Per Day</div>
+      <div class="count-row" style="padding:8px 0">
+        <button class="count-btn" onclick="changeCount(-1)">−</button>
+        <div class="count-num" id="postCount">5</div>
+        <button class="count-btn" onclick="changeCount(1)">+</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px">posts will be generated & published each day</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌐 Content Language</div>
+      <div class="lang-row">
+        <button class="lang-btn selected" id="lang-english" onclick="setLang('english')">English</button>
+        <button class="lang-btn" id="lang-hindi" onclick="setLang('hindi')">हिंदी</button>
+        <button class="lang-btn" id="lang-hinglish" onclick="setLang('hinglish')">Hinglish</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📂 Categories to Include</div>
+      <div class="cat-grid" id="catGrid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" class="section">
+    <div class="card">
+      <div class="card-title">🔑 Blogger API Credentials</div>
+      <div class="input-group">
+        <label class="input-label">Blog ID</label>
+        <input type="text" id="cfgBlogId" class="input-field" placeholder="e.g. 1234567890123456789" oninput="saveConfig()"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Anthropic API Key</label>
+        <input type="password" id="cfgAnthropicKey" class="input-field" placeholder="sk-ant-..." oninput="saveConfig()"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Google OAuth Access Token</label>
+        <input type="password" id="cfgGoogleToken" class="input-field" placeholder="ya29.xxx..." oninput="saveConfig()"/>
+      </div>
+      <div style="background:#ff450010;border:1px solid #ff450033;border-radius:10px;padding:12px;margin-top:4px">
+        <div style="font-size:11px;color:var(--gold);font-weight:600;margin-bottom:4px">📌 How to get Google OAuth Token</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">
+          1. Go to <b style="color:var(--text)">Google Cloud Console</b><br>
+          2. Enable <b style="color:var(--text)">Blogger API v3</b><br>
+          3. Create OAuth 2.0 credentials<br>
+          4. Use OAuth Playground to get token<br>
+          5. Scope: <b style="color:var(--text)">blogger.googleapis.com/auth/blogger</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧪 Test Connection</div>
+      <button class="btn-primary" onclick="testConnection()" style="font-size:14px;padding:13px">
+        🔌 Test Blogger API
+      </button>
+      <div id="testResult" style="margin-top:10px;font-size:12px;color:var(--muted);display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📦 Blog Info</div>
+      <div class="input-group">
+        <label class="input-label">Blog Name</label>
+        <input type="text" id="cfgBlogName" class="input-field" value="NagpurMail" oninput="saveConfig()"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">City Focus</label>
+        <input type="text" id="cfgCity" class="input-field" value="Nagpur, Maharashtra" oninput="saveConfig()"/>
+      </div>
+    </div>
+
+    <button class="btn-secondary" onclick="clearAll()">🗑️ Clear All Data & Reset</button>
+  </div>
+
+  <!-- POSTS TAB -->
+  <div id="tab-posts" class="section">
+    <div id="postsList">
+      <div class="empty">
+        <div class="empty-icon">📝</div>
+        <div class="empty-text">No posts published yet.<br>Run the auto-poster to see history.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="runNow()" title="Publish Now">✨</button>
+
+<script>
+// ===== STATE =====
+let state = {
+  config: { blogId:'', anthropicKey:'', googleToken:'', blogName:'NagpurMail', city:'Nagpur, Maharashtra' },
+  schedule: { enabled: false, hour: 8, minute: 0, postsPerDay: 5, language: 'english', categories: ['local-news','health-remedy','viral-incident'] },
+  posts: [],
+  stats: { totalPublished: 0, todayPublished: 0, totalFailed: 0, lastRunDate: '' },
+  isRunning: false
+};
+
+const CATEGORIES = [
+  { id:'local-news', label:'Local News', icon:'📰' },
+  { id:'health-remedy', label:'Health & Remedies', icon:'🌿' },
+  { id:'tips-lifestyle', label:'Tips & Lifestyle', icon:'💡' },
+  { id:'viral-incident', label:'Viral & Trending', icon:'🔥' },
+  { id:'politics', label:'Politics', icon:'🏛️' },
+];
+
+const TOPICS = {
+  'local-news': [
+    'Nagpur Metro expansion and new stations update 2024',
+    'NMC announces new water supply project for Orange City',
+    'Traffic congestion worsens near Sitabuldi and Dharampeth',
+    'Nagpur Police launch operation against chain snatching',
+    'Heavy rain alert issued for Vidarbha region this week',
+    'Nagpur municipal elections latest update and candidate list',
+    'Orange City power cuts during summer – MSEDCL schedule',
+  ],
+  'health-remedy': [
+    'Best home remedies for summer heat using local Nagpur herbs',
+    'Orange peel health benefits – Nagpur specialty cure',
+    'Monsoon diseases in Vidarbha and how to prevent them',
+    'Ayurvedic joint pain remedy popular among Nagpur elders',
+    'How to stay cool in Nagpur\'s extreme 45°C summer',
+  ],
+  'tips-lifestyle': [
+    'Top 5 must-visit street food spots near Sitabuldi market',
+    'Best weekend trip from Nagpur under ₹2000 budget',
+    'How to save electricity during Nagpur summer peak hours',
+    'Best schools and coaching centers in Nagpur 2024',
+    'Nagpur shopping guide – Dharampeth vs Itwari vs Sitabuldi',
+  ],
+  'viral-incident': [
+    'Viral: Nagpur youth\'s jugaad invention solves water crisis',
+    'Nagpur biker group distributes meals to daily wage workers',
+    'Local Nagpur student\'s painting goes viral on Instagram',
+    'Heartwarming: stray dog rescues child on Nagpur road',
+    'Nagpur flash mob surprises shoppers at Empress Mall',
+  ],
+  'politics': [
+    'Devendra Fadnavis holds mega rally in Nagpur this week',
+    'Congress party demands action on Vidarbha drought situation',
+    'Nagpur Smart City project progress report 2024',
+    'MLA Nitin Gadkari announces new highway project for Nagpur',
+    'BJP vs Congress war of words on Nagpur water supply issue',
+  ]
+};
+
+let schedulerInterval = null;
+let countdownInterval = null;
+
+// ===== INIT =====
+function init() {
+  loadState();
+  renderCatGrid();
+  renderPosts();
+  updateStats();
+  updateTimeDisplay();
+  loadConfigToUI();
+  if (state.schedule.enabled) startScheduler();
+  startCountdown();
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('nm_state');
+    if (saved) { const s = JSON.parse(saved); Object.assign(state, s); }
+  } catch(e) {}
+  // sync today count
+  const today = new Date().toDateString();
+  if (state.stats.lastRunDate !== today) state.stats.todayPublished = 0;
+}
+
+function saveState() {
+  try { localStorage.setItem('nm_state', JSON.stringify(state)); } catch(e) {}
+}
+
+function saveConfig() {
+  state.config.blogId = document.getElementById('cfgBlogId').value.trim();
+  state.config.anthropicKey = document.getElementById('cfgAnthropicKey').value.trim();
+  state.config.googleToken = document.getElementById('cfgGoogleToken').value.trim();
+  state.config.blogName = document.getElementById('cfgBlogName').value.trim();
+  state.config.city = document.getElementById('cfgCity').value.trim();
+  saveState();
+}
+
+function loadConfigToUI() {
+  document.getElementById('cfgBlogId').value = state.config.blogId || '';
+  document.getElementById('cfgAnthropicKey').value = state.config.anthropicKey || '';
+  document.getElementById('cfgGoogleToken').value = state.config.googleToken || '';
+  document.getElementById('cfgBlogName').value = state.config.blogName || 'NagpurMail';
+  document.getElementById('cfgCity').value = state.config.city || 'Nagpur, Maharashtra';
+  document.getElementById('schedHour').value = state.schedule.hour;
+  document.getElementById('schedMin').value = state.schedule.minute;
+  document.getElementById('schedToggle').checked = state.schedule.enabled;
+  document.getElementById('postCount').textContent = state.schedule.postsPerDay;
+  setLang(state.schedule.language, false);
+  updateToggleLabel();
+}
+
+// ===== TABS =====
+function switchTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const tabs = ['home','schedule','settings','posts'];
+  document.querySelectorAll('.tab')[tabs.indexOf(id)].classList.add('active');
+}
+
+// ===== CATEGORY GRID =====
+function renderCatGrid() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = CATEGORIES.map(c => `
+    <button class="cat-btn ${state.schedule.categories.includes(c.id)?'selected':''}" onclick="toggleCat('${c.id}')">
+      <span class="cat-btn-icon">${c.icon}</span>
+      <span class="cat-btn-label">${c.label}</span>
+    </button>
+  `).join('');
+}
+
+function toggleCat(id) {
+  const idx = state.schedule.categories.indexOf(id);
+  if (idx >= 0) { if (state.schedule.categories.length > 1) state.schedule.categories.splice(idx, 1); }
+  else state.schedule.categories.push(id);
+  saveState();
+  renderCatGrid();
+}
+
+// ===== SCHEDULE =====
+function updateTimeDisplay() {
+  const h = parseInt(document.getElementById('schedHour').value) || 0;
+  const m = parseInt(document.getElementById('schedMin').value) || 0;
+  state.schedule.hour = h;
+  state.schedule.minute = m;
+  const hh = String(h).padStart(2,'0');
+  const mm = String(m).padStart(2,'0');
+  document.getElementById('schedTimeDisplay').textContent = hh + ':' + mm;
+  saveState();
+}
+
+function toggleScheduler() {
+  const on = document.getElementById('schedToggle').checked;
+  state.schedule.enabled = on;
+  saveState();
+  updateToggleLabel();
+  if (on) { startScheduler(); showNotif('✅ Scheduler enabled! Posts at ' + pad(state.schedule.hour) + ':' + pad(state.schedule.minute) + ' daily', 'success'); }
+  else { stopScheduler(); showNotif('⏸ Scheduler disabled', 'info'); }
+  setStatus(on ? 'active' : 'idle', on ? 'Scheduled' : 'Idle');
+}
+
+function updateToggleLabel() {
+  const on = state.schedule.enabled;
+  const lbl = document.getElementById('schedToggleLabel');
+  if (on) lbl.textContent = 'On — runs at ' + pad(state.schedule.hour) + ':' + pad(state.schedule.minute) + ' daily';
+  else lbl.textContent = 'Off — tap to enable';
+}
+
+function changeCount(d) {
+  state.schedule.postsPerDay = Math.max(1, Math.min(10, state.schedule.postsPerDay + d));
+  document.getElementById('postCount').textContent = state.schedule.postsPerDay;
+  saveState();
+}
+
+function setLang(lang, save=true) {
+  state.schedule.language = lang;
+  ['english','hindi','hinglish'].forEach(l => {
+    const el = document.getElementById('lang-'+l);
+    if (el) el.classList.toggle('selected', l === lang);
+  });
+  if (save) saveState();
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+// ===== SCHEDULER =====
+function startScheduler() {
+  stopScheduler();
+  schedulerInterval = setInterval(checkSchedule, 30000);
+  checkSchedule();
+}
+
+function stopScheduler() {
+  if (schedulerInterval) { clearInterval(schedulerInterval); schedulerInterval = null; }
+}
+
+function checkSchedule() {
+  if (!state.schedule.enabled || state.isRunning) return;
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes();
+  const today = now.toDateString();
+  if (h === state.schedule.hour && m === state.schedule.minute && state.stats.lastRunDate !== today) {
+    state.stats.lastRunDate = today;
+    saveState();
+    runNow();
+  }
+}
+
+// ===== COUNTDOWN =====
+function startCountdown() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = setInterval(updateCountdown, 1000);
+  updateCountdown();
+}
+
+function updateCountdown() {
+  if (!state.schedule.enabled) {
+    document.getElementById('countdown').textContent = '--:--:--';
+    document.getElementById('countdownSub').textContent = 'Enable scheduler in Schedule tab';
+    return;
+  }
+  const now = new Date();
+  let next = new Date();
+  next.setHours(state.schedule.hour, state.schedule.minute, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  const diff = next - now;
+  const hh = Math.floor(diff / 3600000);
+  const mm = Math.floor((diff % 3600000) / 60000);
+  const ss = Math.floor((diff % 60000) / 1000);
+  document.getElementById('countdown').textContent = pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+  document.getElementById('countdownSub').textContent = 'Auto-publishing ' + state.schedule.postsPerDay + ' posts at ' + pad(state.schedule.hour) + ':' + pad(state.schedule.minute);
+}
+
+// ===== CORE: GENERATE & PUBLISH =====
+async function runNow() {
+  if (state.isRunning) { showNotif('⚠️ Already running!', 'info'); return; }
+  if (!state.config.anthropicKey) { showNotif('⚠️ Set Anthropic API Key in Settings first', 'error'); switchTab('settings'); return; }
+  if (!state.config.blogId || !state.config.googleToken) { showNotif('⚠️ Set Blogger credentials in Settings first', 'error'); switchTab('settings'); return; }
+
+  state.isRunning = true;
+  setStatus('running', 'Publishing...');
+  document.getElementById('runNowBtn').disabled = true;
+  document.getElementById('fab').style.opacity = '0.5';
+  document.getElementById('progressCard').style.display = 'block';
+  switchTab('home');
+
+  const count = state.schedule.postsPerDay;
+  const cats = state.schedule.categories;
+  const lang = state.schedule.language;
+  let success = 0, fail = 0;
+
+  for (let i = 0; i < count; i++) {
+    const cat = cats[i % cats.length];
+    const topicList = TOPICS[cat] || TOPICS['local-news'];
+    const topic = topicList[Math.floor(Math.random() * topicList.length)];
+    const pct = Math.round(((i) / count) * 100);
+
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressCount').textContent = i + ' / ' + count;
+    document.getElementById('progressLabel').textContent = '✍️ Writing: ' + topic.substring(0, 45) + '...';
+    addLog('Generating: ' + topic.substring(0,40) + '...', 'info');
+
+    try {
+      const post = await generatePost(topic, cat, lang);
+      addLog('✅ Generated: ' + (post.title || topic).substring(0,40), 'success');
+      document.getElementById('progressLabel').textContent = '🚀 Publishing to Blogger...';
+      const url = await publishToBlogger(post);
+      post.url = url;
+      post.status = 'published';
+      addLog('🟢 Published! ' + (post.title || '').substring(0,35), 'success');
+      success++;
+      state.stats.totalPublished++;
+      state.stats.todayPublished++;
+      state.posts.unshift(post);
+    } catch(e) {
+      addLog('❌ Failed: ' + e.message, 'error');
+      fail++;
+      state.stats.totalFailed++;
+      state.posts.unshift({ title: topic, category: cat, status:'failed', generatedAt: new Date().toISOString() });
+    }
+
+    state.stats.lastRunDate = new Date().toDateString();
+    saveState();
+    updateStats();
+    renderPosts();
+    if (i < count - 1) await sleep(3000);
+  }
+
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('progressCount').textContent = count + ' / ' + count;
+  document.getElementById('progressLabel').textContent = '🎉 Done! ' + success + ' published, ' + fail + ' failed';
+  addLog('🎉 Session complete: ' + success + ' published, ' + fail + ' failed', success > 0 ? 'success' : 'error');
+  showNotif('🎉 ' + success + '/' + count + ' posts published to NagpurMail!', success > 0 ? 'success' : 'error');
+
+  setTimeout(() => { document.getElementById('progressCard').style.display = 'none'; }, 4000);
+  state.isRunning = false;
+  document.getElementById('runNowBtn').disabled = false;
+  document.getElementById('fab').style.opacity = '1';
+  setStatus(state.schedule.enabled ? 'active' : 'idle', state.schedule.enabled ? 'Scheduled' : 'Idle');
+}
+
+async function generatePost(topic, category, language) {
+  const langNote = language === 'hindi' ? 'Write in Hindi (Devanagari script).' : language === 'hinglish' ? 'Write in Hinglish (mix of Hindi and English naturally).' : 'Write in English.';
+  const catLabel = CATEGORIES.find(c => c.id === category)?.label || category;
+  const city = state.config.city || 'Nagpur';
+  const blogName = state.config.blogName || 'NagpurMail';
+
+  const prompt = `You are an expert SEO blogger for ${blogName} — a popular local blog for ${city}.
+Write a complete SEO-optimized blog post about: "${topic}"
+Category: ${catLabel}
+${langNote}
+Rules:
+- Catchy title with local city keyword
+- Local tone, mention ${city} naturally
+- 3-4 sections with H2 subheadings
+- Practical and relatable content
+- 500-600 words
+Respond ONLY with valid JSON (no markdown, no backticks):
+{"title":"...","metaDescription":"...","slug":"url-slug","content":"full HTML with h2 tags","hashtags":["#tag1","#tag2","#tag3","#tag4","#tag5"],"labels":["category","city","topic"]}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': state.config.anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role:'user', content: prompt }] })
+  });
+  if (!res.ok) throw new Error('AI API error ' + res.status);
+  const data = await res.json();
+  const text = data.content?.map(b => b.text||'').join('') || '';
+  const clean = text.replace(/```json|```/g,'').trim();
+  const parsed = JSON.parse(clean);
+  return { ...parsed, category, topic, language, generatedAt: new Date().toISOString() };
+}
+
+async function publishToBlogger(post) {
+  const blogId = state.config.blogId;
+  const token = state.config.googleToken;
+  const res = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: post.title,
+      content: post.content + '<br><br>' + (post.hashtags||[]).join(' '),
+      labels: post.labels || [post.category, 'NagpurMail'],
+    })
+  });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Blogger error ' + res.status); }
+  const data = await res.json();
+  return data.url || '';
+}
+
+// ===== TEST CONNECTION =====
+async function testConnection() {
+  const result = document.getElementById('testResult');
+  result.style.display = 'block';
+  result.style.color = 'var(--gold)';
+  result.textContent = '⏳ Testing Blogger API...';
+  try {
+    const res = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${state.config.blogId}`, {
+      headers: { 'Authorization': 'Bearer ' + state.config.googleToken }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      result.style.color = 'var(--green)';
+      result.textContent = '✅ Connected! Blog: ' + (data.name || state.config.blogId);
+      showNotif('✅ Blogger API working!', 'success');
+    } else {
+      const e = await res.json();
+      result.style.color = 'var(--red)';
+      result.textContent = '❌ Error: ' + (e.error?.message || 'Check your credentials');
+    }
+  } catch(e) {
+    result.style.color = 'var(--red)';
+    result.textContent = '❌ Network error. Check token & Blog ID.';
+  }
+}
+
+// ===== UI HELPERS =====
+function setStatus(type, text) {
+  const dot = document.getElementById('statusDot');
+  const label = document.getElementById('statusText');
+  dot.className = 'status-dot ' + type;
+  label.textContent = text;
+}
+
+function addLog(msg, type='info') {
+  const wrap = document.getElementById('logWrap');
+  const existing = wrap.querySelector('.empty');
+  if (existing) existing.remove();
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  const now = new Date();
+  entry.innerHTML = `<span class="log-time">${pad(now.getHours())}:${pad(now.getMinutes())}</span><span class="log-msg">${msg}</span>`;
+  wrap.insertBefore(entry, wrap.firstChild);
+  if (wrap.children.length > 30) wrap.removeChild(wrap.lastChild);
+}
+
+function updateStats() {
+  document.getElementById('totalPub').textContent = state.stats.totalPublished;
+  document.getElementById('todayPub').textContent = state.stats.todayPublished;
+  document.getElementById('totalFail').textContent = state.stats.totalFailed;
+}
+
+function renderPosts() {
+  const list = document.getElementById('postsList');
+  if (!state.posts.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No posts yet. Run auto-poster to see history.</div></div>';
+    return;
+  }
+  list.innerHTML = state.posts.slice(0,50).map(p => `
+    <div class="post-card ${p.status}" style="margin-bottom:10px">
+      <div class="post-title">${p.title || p.topic}</div>
+      <div class="post-meta" style="margin-top:6px">
+        <span class="post-tag cat">${CATEGORIES.find(c=>c.id===p.category)?.icon || '📰'} ${CATEGORIES.find(c=>c.id===p.category)?.label || p.category}</span>
+        <span class="post-tag status-${p.status==='published'?'pub':p.status==='failed'?'fail':'pend'}">${p.status==='published'?'✅ Published':p.status==='failed'?'❌ Failed':'⏳ Pending'}</span>
+        <span style="font-size:10px;color:var(--muted)">${new Date(p.generatedAt).toLocaleDateString()}</span>
+      </div>
+      ${p.hashtags ? '<div class="post-hashtags">' + (p.hashtags||[]).join(' ') + '</div>' : ''}
+      ${p.url ? '<div style="margin-top:6px"><a href="'+p.url+'" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none">🔗 View on Blogger</a></div>' : ''}
+    </div>
+  `).join('');
+}
+
+function showNotif(msg, type='info') {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif ' + type + ' show';
+  setTimeout(() => { el.classList.remove('show'); }, 3000);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function clearAll() {
+  if (!confirm('Reset all data and settings?')) return;
+  localStorage.removeItem('nm_state');
+  location.reload();
+}
+
+init();
+</script>
+</body>
+</html>
